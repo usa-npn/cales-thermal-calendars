@@ -84,7 +84,7 @@ main <- tar_plan(
     ),
     tar_target(
       doy_plot,
-      plot_doy(gdd_doy_stack, threshold = threshold),
+      plot_doy(gdd_doy_stack, threshold = threshold, width = 15, height = 8),
       format = "file"
     ),
     tar_terra_rast(

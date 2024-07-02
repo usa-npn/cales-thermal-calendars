@@ -14,6 +14,9 @@ summarize_normals <- function(stack, years = 1991:2020) {
   years <- years[ which(years %in% names(stack))]
   
   stack[[years]] |> 
-    terra::app(function(x) c(mean = mean(x, na.rm = TRUE), sd = sd(x, na.rm = TRUE)))
+    terra::app(function(x) {
+      x <- x[is.finite(x)] #rm Inf
+      c(mean = mean(x, na.rm = TRUE), sd = sd(x, na.rm = TRUE))
+    })
 }
 

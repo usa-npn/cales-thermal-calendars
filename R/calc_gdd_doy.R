@@ -56,6 +56,11 @@ calc_gdd_doy <- function(rast_dir, roi, gdd_threshold, gdd_base = 0) {
   # DOY to reach a single threshold
   gdd_doy <- which.lyr(agdd > gdd_threshold)
   
+  # Change `NA`s that represent never reaching the threshold GDD to `Inf`s.
+  # These will be treated the same for modeling (i.e. dropped), but will allow
+  # different treatment for plotting
+  gdd_doy[is.na(gdd_doy) & !is.na(agdd[[1]])] <- Inf
+  
   names(gdd_doy) <- 
     fs::path_file(rast_dir) #gets just the end folder name which should be the year
   
