@@ -19,7 +19,7 @@ controller_hpc_light <-
     name = "hpc_light",
     workers = 5, 
     seconds_idle = 300, #  time until workers are shut down after idle
-    tasks_max = 20, # make workers semi-persistent—launch new SLURM job after 20 targets
+    tasks_max = 40, # make workers semi-persistent—launch new SLURM job after 40 targets
     garbage_collection = TRUE, # run garbage collection between tasks
     launch_max = 5L, # number of unproductive launched workers until error
     slurm_partition = "standard",
@@ -31,15 +31,15 @@ controller_hpc_light <-
     script_lines = c(
       "#SBATCH --account theresam",
       "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu8/openblas/0.3.7/lib/libopenblas.so",
-      "module load gdal/3.8.5 R/4.3 eigen/3.4.0"
+      "module load gdal/3.8.5 R/4.4 eigen/3.4.0"
       #add additional lines to the SLURM job script as necessary here
     )
   )
 controller_hpc_heavy <- 
   crew.cluster::crew_controller_slurm(
     name = "hpc_heavy",
-    workers = 5, 
-    seconds_idle = 300, #  time until workers are shut down after idle
+    workers = 3, 
+    seconds_idle = 1000, #  time until workers are shut down after idle
     tasks_max = 20, # make workers semi-persistent—launch new SLURM job after 20 targets
     garbage_collection = TRUE, # run garbage collection between tasks
     launch_max = 5L, # number of unproductive launched workers until error
@@ -52,7 +52,7 @@ controller_hpc_heavy <-
     script_lines = c(
       "#SBATCH --account theresam",
       "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu8/openblas/0.3.7/lib/libopenblas.so",
-      "module load gdal/3.8.5 R/4.3 eigen/3.4.0"
+      "module load gdal/3.8.5 R/4.4 eigen/3.4.0"
       #add additional lines to the SLURM job script as necessary here
     )
   )
@@ -75,11 +75,14 @@ if (isTRUE(hpc)) { #when on HPC, do ALL the thresholds
 tar_option_set(
   # Packages that your targets need for their tasks.
   packages = c("fs", "terra", "stringr", "lubridate", "colorspace", "purrr",
-               "ggplot2", "tidyterra", "glue", "car", "httr2", "readr", "sf", "maps"),
+               "ggplot2", "tidyterra", "glue", "car", "httr2", "readr", "sf", "maps", "tidyr"),
   controller = crew::crew_controller_group(controller_hpc_heavy, controller_hpc_light, controller_local),
   resources = tar_resources(
     crew = tar_resources_crew(controller = ifelse(hpc, "hpc_light", "local"))
-  )
+  ),
+  #assume workers have access to the data as well
+  storage = "worker",
+  retrieval = "worker"
 )
 
 # Run the R scripts in the R/ folder with your custom functions:
@@ -115,13 +118,17 @@ main <- tar_plan(
     tar_target(
       doy_plot,
       plot_doy(gdd_doy_stack, threshold = threshold, width = 15, height = 8),
-      resources = tar_resources(crew = tar_resources_crew(controller = "hpc_heavy")),
+      resources = tar_resources(
+        crew = tar_resources_crew(controller = "hpc_heavy")
+      ),
       format = "file"
     ),
     tar_terra_rast(
       doy_trend,
       get_lm_slope(gdd_doy_stack),
-      resources = tar_resources(crew = tar_resources_crew(controller = "hpc_heavy"))
+      resources = tar_resources(
+        crew = tar_resources_crew(controller = "hpc_heavy")
+      )
     ),
     tar_target(
       doy_trend_tif,
@@ -140,12 +147,14 @@ main <- tar_plan(
     ),
     tar_target(
       normals_mean_gtiff,
-      write_tiff(normals_summary[["mean"]], filename = paste0("normals_mean_", threshold, ".tiff")),
+      write_tiff(normals_summary[["mean"]],
+                 filename = paste0("normals_mean_", threshold, ".tiff")),
       format = "file"
     ),
     tar_target(
       normals_sd_gtiff,
-      write_tiff(normals_summary[["sd"]], filename = paste0("normals_sd_", threshold, ".tiff")),
+      write_tiff(normals_summary[["sd"]], 
+                 filename = paste0("normals_sd_", threshold, ".tiff")),
       format = "file"
     ),
     tar_target(
@@ -187,15 +196,81 @@ combine_results <- tar_plan(
     tar_write_csv(trend_data, "output/data/slopes.csv")
   )
 )
-reports <- tar_plan(
-  # Reports 
-  # tar_quarto(spatial_report, path = "docs/spatial-trends-report.qmd", working_directory = "docs"),
-  # tar_quarto(readme, path = "README.Qmd", cue = tar_cue("always"))
+
+gams <- tar_plan(
+  tar_map(
+    values = tidyr::expand_grid(
+      resolution = c(50000, 25000, 10000, 5000),
+      # resolution = c(50000),
+      k = c(50, 100, 200, 400, 800)
+      # k = c(50, 100)
+    ),
+    tar_target(
+      gam_df,
+      make_gam_df(gdd_doy_stack_50, res = resolution),
+      format = "qs"
+    ),
+    tar_target(
+      gam,
+      fit_bam(gam_df, k_spatial = k),
+      format = "qs",
+      resources = tar_resources(
+        crew = tar_resources_crew(controller = ifelse(hpc, "hpc_heavy", "local"))
+      )
+    ),
+    tar_file(
+      smooth_est,
+      draw_smooth_estimates(gam, roi),
+      description = "Save smooth estimates plots"
+    ),
+    tar_target(
+      k_check,
+      check_k(gam),
+      packages = c("mgcv", "dplyr")
+    )
+  ),
+  tar_target(
+    k_check_df,
+    bind_rows(!!!rlang::syms(
+      tidyr::expand_grid(
+        resolution = c(50000, 25000, 10000, 5000),
+        # resolution = c(50000),
+        k = c(50, 100, 200, 400, 800)
+        # k = c(50, 100)
+      ) |> 
+        glue::glue_data("k_check_{resolution}_{k}")
+    )),
+    tidy_eval = TRUE
+  ),
+  tar_file(
+    k_check_df_csv,
+    tar_write_csv(k_check_df, "k_check.csv")
+  ),
+  tar_target(
+    slope_newdata,
+    make_slope_newdata(gdd_doy_stack_50, res_m = 50000)
+  ),
+  tar_map(
+    values = list(
+      gam = rlang::syms(c("gam_50000_50", "gam_50000_400", "gam_25000_400", "gam_25000_800", "gam_10000_800"))
+    ),
+    tar_target(
+      slopes,
+      calc_avg_slopes(gam, slope_newdata),
+      packages = c("marginaleffects", "mgcv")
+    ),
+    tar_file(
+      slopes_plot,
+      plot_avg_slopes(slopes),
+      packages = c("ggpattern", "ggplot2", "terra", "tidyterra")
+    )
+  )
 )
 
-#if on HPC don't render quarto docs (no quarto or pandoc on HPC)
-if (isTRUE(hpc)) {
-  list(main, get_results, combine_results)
-} else {
-  list(main, get_results, combine_results, reports)
-}
+
+tar_plan(
+  main,
+  get_results,
+  combine_results,
+  gams
+)
