@@ -137,7 +137,7 @@ tar_plan(
     values = list(threshold = threshold),
     tar_terra_rast(
       gdd_doy,
-      calc_gdd_doy(rast_dir = prism_tmean, roi = roi, gdd_threshold = threshold),
+      calc_gdd_doy(rast_dir = prism_tmean, roi = roi, gdd_threshold = threshold, gdd_base = 10),
       pattern = map(prism_tmean),
       iteration = "list",
       description = "calc DOY to reach threshold GDD"
