@@ -9,7 +9,7 @@ library(tarchetypes)
 library(geotargets)
 library(crew)
 library(crew.cluster)
-library(qs) #for format = "qs"
+library(qs2) #for format = "qs"
 library(nanoparquet) #for format = tar_format_nanoparquet()
 
 # Detect whether you're on HPC & not with an Open On Demand session (which cannot submit SLURM jobs).
@@ -23,8 +23,6 @@ controller_hpc_light <-
     # make workers semi-persistent: 
     tasks_max = 40, # shut down SLURM job after completing 40 targets
     seconds_idle = 300, # or when idle for some time
-    garbage_collection = TRUE, # run garbage collection between tasks
-    launch_max = 5L, # number of unproductive launched workers until error
     slurm_partition = "standard",
     slurm_time_minutes = 60, #wall time for each worker
     slurm_log_output = "logs/crew_log_%A.out",
@@ -44,8 +42,6 @@ controller_hpc_heavy <-
     workers = 3, 
     seconds_idle = 1000,
     tasks_max = 20,
-    garbage_collection = TRUE,
-    launch_max = 5L,
     slurm_partition = "standard",
     slurm_time_minutes = 360, #wall time for each worker
     slurm_log_output = "logs/crew_log_%A.out",
@@ -109,6 +105,7 @@ tar_option_set(
   #assume workers have access to the _targets/ data store
   storage = "worker",
   retrieval = "worker",
+  memory = "auto",
   #allows use of `tar_workspace()` to load dependencies of an errored target for interactive debugging.
   workspace_on_error = TRUE 
 )
