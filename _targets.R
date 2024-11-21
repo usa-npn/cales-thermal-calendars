@@ -23,17 +23,19 @@ controller_hpc <-
     # make workers semi-persistent: 
     tasks_max = 40, # shut down SLURM job after completing 40 targets
     seconds_idle = 300, # or when idle for some time
-    slurm_partition = "standard",
-    slurm_time_minutes = 60, #wall time for each worker
-    slurm_log_output = "logs/crew_log_%A.out",
-    slurm_log_error = "logs/crew_log_%A.err",
-    slurm_memory_gigabytes_per_cpu = 5,
-    slurm_cpus_per_task = 3, #use 3 cpus per worker
-    script_lines = c(
-      "#SBATCH --account theresam",
-      #use optimized openBLAS for linear algebra
-      "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu8/openblas/0.3.7/lib/libopenblas.so",
-      "module load gdal/3.8.5 R/4.4 eigen/3.4.0"
+    options_cluster = crew_options_slurm(
+      script_lines = c(
+        "#SBATCH --account theresam",
+        #use optimized openBLAS for linear algebra
+        "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu8/openblas/0.3.7/lib/libopenblas.so",
+        "module load gdal/3.8.5 R/4.4 eigen/3.4.0"
+      ),
+      log_output = "logs/crew_log_%A.out",
+      log_error = "logs/crew_log_%A.err",
+      memory_gigabytes_per_cpu = 5,
+      cpus_per_task = 3, #use 3 cpus per worker
+      time_minutes = 60, #wall time for each worker
+      partition = "standard"
     )
   )
 
