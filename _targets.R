@@ -119,13 +119,10 @@ tar_plan(
       iteration = "list",
       description = "calc DOY to reach threshold GDD"
     ),
-    
-    # This converts the output of the dynamic branching to be SpatRasters with
-    # multiple layers instead of lists of SpatRasters. Would love to not have to
-    # have this target, but there is no way to customize how iteration works.
     tar_terra_rast(
       gdd_doy_stack,
-      terra::rast(unname(gdd_doy))
+      terra::rast(unname(gdd_doy)),
+      description = "Stack list of SpatRasters into layers of single SpatRaster"
     ),
     tar_terra_rast(
       normals_summary,
