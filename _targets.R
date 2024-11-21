@@ -16,9 +16,9 @@ library(nanoparquet) #for format = tar_format_nanoparquet()
 slurm_host <- Sys.getenv("SLURM_SUBMIT_HOST")
 hpc <- grepl("hpc\\.arizona\\.edu", slurm_host) & !grepl("ood", slurm_host)
 
-controller_hpc_light <- 
+controller_hpc <- 
   crew.cluster::crew_controller_slurm(
-    name = "hpc_light",
+    name = "hpc",
     workers = 5, 
     # make workers semi-persistent: 
     tasks_max = 40, # shut down SLURM job after completing 40 targets
@@ -32,24 +32,6 @@ controller_hpc_light <-
     script_lines = c(
       "#SBATCH --account theresam",
       #use optimized openBLAS for linear algebra
-      "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu8/openblas/0.3.7/lib/libopenblas.so",
-      "module load gdal/3.8.5 R/4.4 eigen/3.4.0"
-    )
-  )
-controller_hpc_heavy <- 
-  crew.cluster::crew_controller_slurm(
-    name = "hpc_heavy",
-    workers = 3, 
-    seconds_idle = 1000,
-    tasks_max = 20,
-    slurm_partition = "standard",
-    slurm_time_minutes = 360, #wall time for each worker
-    slurm_log_output = "logs/crew_log_%A.out",
-    slurm_log_error = "logs/crew_log_%A.err",
-    slurm_memory_gigabytes_per_cpu = 5,
-    slurm_cpus_per_task = 7, 
-    script_lines = c(
-      "#SBATCH --account theresam",
       "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu8/openblas/0.3.7/lib/libopenblas.so",
       "module load gdal/3.8.5 R/4.4 eigen/3.4.0"
     )
@@ -96,11 +78,9 @@ tar_option_set(
     "forcats",
     "mgcv"
   ), 
-  controller = crew::crew_controller_group(
-    controller_hpc_heavy, controller_hpc_light, controller_local
-  ),
+  controller = crew::crew_controller_group(controller_hpc, controller_local),
   resources = tar_resources(
-    crew = tar_resources_crew(controller = ifelse(isTRUE(hpc), "hpc_light", "local"))
+    crew = tar_resources_crew(controller = ifelse(isTRUE(hpc), "hpc", "local"))
   ),
   #assume workers have access to the _targets/ data store
   storage = "worker",
