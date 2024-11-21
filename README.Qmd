@@ -11,19 +11,18 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Estimating trends in phenology
+# Spatiotemporal patterns in phenology in the Northeastern USA
 
 <!-- badges: start -->
 
-[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+[![Project Status: Active -- The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 <!-- badges: end -->
 
-The goal of this project is to estimate spatial and temporal trends in phenology in the Northeastern US using [PRISM](https://prism.oregonstate.edu/) temperature data.
-This analytical pipeline downloads daily data, calculates growing degree days (GDD) for each day, and then finds the day of year (DOY) that certain threshold GDD are reached for this region.
-Products will include rasters of mean DOY for a variety of GDD thresholds over the normals period (1991-2020), and rasters of estimated rates of change in DOY for these thresholds.
-
-Report of work in progress: <https://usa-npn.github.io/cales-thermal-calendars/spatial-trends-report.html>
+The goal of this project is to estimate spatial and temporal patterns in phenology in the [Northeast CASC](https://www.usgs.gov/programs/climate-adaptation-science-centers/northeast-casc) member states using [PRISM](https://prism.oregonstate.edu/) temperature data.
+This workflow downloads daily data, calculates growing degree days (GDD) for each day, and then finds the day of year (DOY) that certain threshold GDD are reached for this region.
+Products include rasters of mean and standard deviation of DOY for a variety of GDD thresholds over the normals period (1991-2020), and rasters of rates of change in DOY for these thresholds estimated by simple pixel-wise linear regression.
+For continuing work on estimating spatiotemporal trends with more sophisticated statistical methods, see https://github.com/cct-datascience/thermal-trends
 
 ## Reproducibility
 
@@ -31,6 +30,7 @@ Report of work in progress: <https://usa-npn.github.io/cales-thermal-calendars/s
 
 This project uses [`renv`](https://rstudio.github.io/renv/articles/renv.html) for package management.
 When opening this repo as an RStudio Project for the first time, `renv` should automatically install itself and prompt you to run `renv::restore()` to install all package dependencies.
+If this gets frustrating, and you'd rather just install the latest versions of required packages yourself, you can run `renv::deactivate()` to remove the `renv` infrastructure---there are no guarantees the workflow will run with different versions of R package dependencies.
 
 ### `targets`
 
