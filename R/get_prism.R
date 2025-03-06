@@ -1,44 +1,47 @@
-#' Download mean temp from PRISM
+#' Download data from PRISM
 #'
-#' Downloads an entire year of tmean data from PRISM using `get_prism_dailys()`
+#' Downloads an entire year of data from PRISM using `get_prism_dailys()`
 #' and returns the download path so it works with `format = 'file'` in `targets`
 #'
 #' @param year year of data to be downloaded
-#' @param prism_dir base directory for PRISM data.  A subfolder will be created for the year
+#' @param variable variable to get
+#' @param prism_dir base directory for PRISM data.  Subfolders will be created for the variable and year
 #'
 #' @return path to folder for that year of data
-get_prism_tmean <- function(year, prism_dir = "data/prism") {
-  message("Downloading PRISM tmean data for ", year)
+get_prism <- function(year, variable = c("tmin", "tmax", "tmean"), prism_dir = "data/prism") {
+  variable <- match.arg(variable)
+  cli::cli_alert("Downloading PRISM {variable} data for {year}")
   
   #check if path exists and create if not
-  year_dir <- fs::dir_create(path(prism_dir, year))
-
+  year_dir <- fs::dir_create(fs::path(prism_dir, variable, year))
+  
   #make sequence of dates
-  date_start <- make_date(year = year)
-  date_end <- make_date(year = year, month = 12, day = 31)
+  date_start <- lubridate::make_date(year = year)
+  date_end <- lubridate::make_date(year = year, month = 12, day = 31)
   dates <- seq(date_start, date_end, "day")
   
   #make list of requests
   #api documentation: https://prism.oregonstate.edu/documents/PRISM_downloads_web_service.pdf
   
   base_url <- "https://services.nacse.org/prism/data/public/4km"
-  req_tmean <- 
-    request(base_url) |> 
-    req_url_path_append("tmean") |> 
-    req_retry(max_tries = 10)
+  req <- 
+    httr2::request(base_url) |> 
+    httr2::req_user_agent("University of Arizona CCT Data Science (https://datascience.cct.arizona.edu/)") |> 
+    httr2::req_url_path_append(variable) |> 
+    httr2::req_retry(max_tries = 10)
   
-  reqs <- purrr::map(dates, \(x) req_tmean |> req_url_path_append(format(x, "%Y%m%d")))
+  reqs <- purrr::map(dates, \(x) req |> httr2::req_url_path_append(format(x, "%Y%m%d")))
   
   # retrieve filenames
-  head_reqs <- purrr::map(reqs, \(x) req_method(x, "HEAD"))
-  head_resps <- req_perform_sequential(head_reqs, progress = "Retrieving filenames")
+  head_reqs <- purrr::map(reqs, \(x) httr2::req_method(x, "HEAD"))
+  head_resps <- httr2::req_perform_sequential(head_reqs, progress = "Retrieving filenames")
   filenames <- head_resps |> 
     purrr::map_chr(\(x) {
       x$headers$`Content-Disposition` |> 
         stringr::str_remove("filename=") |>
         stringr::str_remove_all('\\"') |> 
-        path()})
-  filepaths <- path(year_dir, filenames)
+        fs::path()})
+  filepaths <- fs::path(year_dir, filenames)
   # Figure out which ones need to be downloaded
   files_exist <- fs::file_exists(filepaths)
   
@@ -46,31 +49,31 @@ get_prism_tmean <- function(year, prism_dir = "data/prism") {
   files_to_dl <- filepaths[!files_exist]
   
   #check for provisional files that need to be replaced
-  provisional_filename <- str_replace(files_to_dl, "stable", "provisional")
-  already_downloaded <- dir_ls(path(year_dir))
+  provisional_filename <- stringr::str_replace(files_to_dl, "stable", "provisional")
+  already_downloaded <- fs::dir_ls(fs::path(year_dir))
   provisional_to_be_replaced <- 
     already_downloaded[already_downloaded %in% provisional_filename]
-  files_replacing_provisional <- files_to_dl[file_exists(provisional_filename)]
+  files_replacing_provisional <- files_to_dl[fs::file_exists(provisional_filename)]
   stopifnot(length(provisional_to_be_replaced) == length(files_replacing_provisional))
   
   if (length(files_replacing_provisional) > 0) {
-    message("Stable versions will be downloaded to replace ", length(files_replacing_provisional), " provisional files")
+    cli::cli_alert_warning("Stable versions will be downloaded to replace {length(files_replacing_provisional)} provisional files")
     #remove provisional versions
-    file_delete(provisional_to_be_replaced)
+    fs::file_delete(provisional_to_be_replaced)
   }
   
-  message(length(reqs_to_perform), " files to download")
+  cli::cli_alert_info("{length(reqs_to_perform)} files to download")
   
   if (length(reqs_to_perform) > 0) {
     resp <- 
-      req_perform_sequential(
+      httr2::req_perform_sequential(
         reqs_to_perform,
         paths = files_to_dl,
         progress = "Downloading"
       )
     #check that they are actually zip files and if not change extension to .txt
     
-    walk(files_to_dl, \(x) {
+    purrr::walk(files_to_dl, \(x) {
       is_zip <- check_zip_file(x)
       if (!isTRUE(is_zip)) {
         warning(is_zip)
@@ -78,7 +81,7 @@ get_prism_tmean <- function(year, prism_dir = "data/prism") {
       }
     })
   } else {
-    message("Skipping downloading.")
+    cli::cli_alert_info("Skipping downloading.")
   }
   
   #return the path to the folder so targets tracks the whole dang thing
