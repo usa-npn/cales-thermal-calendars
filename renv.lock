@@ -1400,7 +1400,7 @@
     },
     "terra": {
       "Package": "terra",
-      "Version": "1.7-78",
+      "Version": "1.8-29",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -1408,7 +1408,7 @@
         "Rcpp",
         "methods"
       ],
-      "Hash": "8f020def0792119cb98bd8f696dab22d"
+      "Hash": "10321b092e16e7c5c02a3bf22727ef39"
     },
     "tibble": {
       "Package": "tibble",
