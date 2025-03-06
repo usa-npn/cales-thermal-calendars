@@ -62,21 +62,15 @@ tar_option_set(
     "terra",
     "stringr",
     "lubridate",
-    "colorspace",
     "purrr",
     "ggplot2",
     "tidyterra",
     "glue",
-    "car",
     "httr2",
-    "readr",
     "sf",
     "maps",
     "tidyr",
-    "dplyr",
-    "broom",
-    "forcats",
-    "mgcv"
+    "dplyr"
   ), 
   controller = crew::crew_controller_group(controller_hpc, controller_local),
   resources = tar_resources(
