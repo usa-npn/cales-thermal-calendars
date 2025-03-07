@@ -40,14 +40,16 @@ controller_hpc <-
 controller_local <-
   crew::crew_controller_local(
     name = "local",
-    workers = 3, 
+    workers = 5, 
     seconds_idle = 60,
     options_local = crew::crew_options_local(
       log_directory = "logs/"
     )
   )
 
-if (isTRUE(hpc)) { #when on HPC, do ALL the thresholds
+js2 <- Sys.info()[["sysname"]] == "Linux" #TODO: this is crude.  Find a better indicator JS2
+
+if (isTRUE(hpc) | isTRUE(js2)) { #when on HPC or Jetstream2, do ALL the thresholds
   threshold <- seq(50, 2500, by = 50)
 } else { # only do select thresholds
   threshold <- c(50, 1250, 2500)
