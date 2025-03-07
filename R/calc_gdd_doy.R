@@ -122,6 +122,40 @@ calc_gdd_be_doy <- function(tmin_dir, tmax_dir, roi, gdd_threshold, gdd_base = 3
   gdd_doy
 }
 
+
+#' Baskerville-Emin method for GDD calculation
+#' 
+#' @param tmin Numeric vector; min daily temp in ºF.
+#' @param tmax Numeric vector; max daily temp in ºF.
+#' @param base Base temp in ºF.
+#' @references 
+#' https://www.canr.msu.edu/uploads/files/Research_Center/NW_Mich_Hort/be_method.pdf
+calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
+  .mapply(function(tmin, tmax) { #for each day...
+    #NAs beget NAs
+    if (is.na(tmin) | is.na(tmax)) {
+      return(NA)
+    }
+    #step 2
+    if (tmax < base) {
+      return(0)
+    }
+    #step 3
+    tmean <- (tmin + tmax) / 2
+    
+    #step4
+    if (tmin >= base) { #simple case
+      return (tmean - base)
+    }
+    
+    #step5
+    W <- (tmax - tmin) / 2
+    A <- asin((base - tmean) / W)
+    gdd <- ((W * cos(A)) - ((base - tmean) * ((pi/2) - A))) / pi
+    return(gdd)
+  }, dots = list(tmin = tmin, tmax = tmax), MoreArgs = NULL) |> as.numeric()
+}
+
 read_prism <- function(rast_dir) {
   files <- fs::dir_ls(rast_dir, glob = "*.zip")
   
