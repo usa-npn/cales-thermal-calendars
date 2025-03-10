@@ -40,7 +40,7 @@ controller_hpc <-
 controller_local <-
   crew::crew_controller_local(
     name = "local",
-    workers = 5, 
+    workers = 6, 
     seconds_idle = 60,
     options_local = crew::crew_options_local(
       log_directory = "logs/"
