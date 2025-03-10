@@ -8,5 +8,12 @@ data/prism/
 _targets/
 logs/
 output/rasters/
-output/figs/
-output/data/
+output/figs/*
+!output/figs/normals_mean_50.png
+!output/figs/normals_mean_1250.png
+!output/figs/normals_mean_2500.png
+!output/figs/normals_sd_50.png
+!output/figs/normals_sd_1250.png
+!output/figs/normals_sd_2500.png
+nohup.out
+.Renviron

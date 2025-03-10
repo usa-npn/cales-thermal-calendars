@@ -25,7 +25,7 @@ controller_hpc <-
       script_lines = c(
         "#SBATCH --account theresam",
         #use optimized openBLAS for linear algebra
-        "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu8/openblas/0.3.7/lib/libopenblas.so",
+        "export LD_PRELOAD=/opt/ohpc/pub/libs/gnu13/openblas/0.3.21/lib/libopenblas.so",
         "module load gdal/3.8.5 R/4.4 eigen/3.4.0"
       ),
       log_output = "logs/crew_log_%A.out",
@@ -40,14 +40,16 @@ controller_hpc <-
 controller_local <-
   crew::crew_controller_local(
     name = "local",
-    workers = 3, 
+    workers = 6, 
     seconds_idle = 60,
     options_local = crew::crew_options_local(
       log_directory = "logs/"
     )
   )
 
-if (isTRUE(hpc)) { #when on HPC, do ALL the thresholds
+js2 <- Sys.info()[["sysname"]] == "Linux" #TODO: this is crude.  Find a better indicator JS2
+
+if (isTRUE(hpc) | isTRUE(js2)) { #when on HPC or Jetstream2, do ALL the thresholds
   threshold <- seq(50, 2500, by = 50)
 } else { # only do select thresholds
   threshold <- c(50, 1250, 2500)
@@ -62,21 +64,15 @@ tar_option_set(
     "terra",
     "stringr",
     "lubridate",
-    "colorspace",
     "purrr",
     "ggplot2",
     "tidyterra",
     "glue",
-    "car",
     "httr2",
-    "readr",
     "sf",
     "maps",
     "tidyr",
-    "dplyr",
-    "broom",
-    "forcats",
-    "mgcv"
+    "dplyr"
   ), 
   controller = crew::crew_controller_group(controller_hpc, controller_local),
   resources = tar_resources(
@@ -97,12 +93,20 @@ tar_source()
 tar_plan(
   years = 1981:2023,
   tar_target(
-    name = prism_tmean,
-    command = get_prism_tmean(years),
+    name = prism_tmin,
+    command = get_prism(years, "tmin"),
     pattern = map(years),
-    deployment = "main", #prevent downloads from running in parallel on distributed workers
-    format = "file", 
-    description = "download PRISM data"
+    deployment = "main",
+    format = "file",
+    description = "download PRISM tmin"
+  ),
+  tar_target(
+    name = prism_tmax,
+    command = get_prism(years, "tmax"),
+    pattern = map(years),
+    deployment = "main",
+    format = "file",
+    description = "download PRISM tmax"
   ),
   tar_terra_vect(
     roi,
@@ -114,8 +118,14 @@ tar_plan(
     values = list(threshold = threshold),
     tar_terra_rast(
       gdd_doy,
-      calc_gdd_doy(rast_dir = prism_tmean, roi = roi, gdd_threshold = threshold, gdd_base = 10),
-      pattern = map(prism_tmean),
+      calc_gdd_be_doy(
+        tmin_dir = prism_tmin, #ºC, but gets converted to ºF
+        tmax_dir = prism_tmax, #ºC, but gets converted to ºF
+        roi = roi, 
+        gdd_threshold = threshold, 
+        gdd_base = 50 #ºF
+      ),
+      pattern = map(prism_tmin, prism_tmax),
       iteration = "list",
       description = "calc DOY to reach threshold GDD"
     ),
@@ -129,6 +139,7 @@ tar_plan(
       summarize_normals(gdd_doy_stack),
       deployment = "main"
     ),
+    #these layers are written out as separate files because that is what was requested
     tar_target(
       normals_mean_gtiff,
       write_tiff(normals_summary[["mean"]],
@@ -140,6 +151,13 @@ tar_plan(
       write_tiff(normals_summary[["sd"]], 
                  filename = paste0("normals_sd_", threshold, ".tiff")),
       format = "file"
+    ),
+    tar_target(
+      normals_count_gtiff,
+      write_tiff(normals_summary[["count"]], 
+                 filename = paste0("normals_count_", threshold, ".tiff")),
+      format = "file",
+      description = "Number of years the GDD threshold is reached"
     ),
     tar_target(
       normals_mean_plot,
