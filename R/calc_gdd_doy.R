@@ -8,7 +8,7 @@
 #'
 #' @return SpatRaster
 calc_gdd_doy <- function(rast_dir, roi, gdd_threshold, gdd_base = 0) {
-  files <- dir_ls(rast_dir, glob = "*.zip")
+  files <- fs::dir_ls(rast_dir, glob = "*.zip")
 
   #convert filenames to DOY to name layers later
   doys <- files |>
@@ -33,8 +33,8 @@ calc_gdd_doy <- function(rast_dir, roi, gdd_threshold, gdd_base = 0) {
   prism <- subset(prism, as.character(min(doys):max(doys)))
   
   #crop to roi
-  roi <- project(roi, prism)
-  prism_ne <- crop(prism, roi, mask = TRUE)
+  roi <- terra::project(roi, prism)
+  prism_ne <- terra::crop(prism, roi, mask = TRUE)
   
   # convert to degree days
   # function for a single layer:
@@ -55,7 +55,7 @@ calc_gdd_doy <- function(rast_dir, roi, gdd_threshold, gdd_base = 0) {
   agdd <- cumsum(gdd)
   
   # DOY to reach a single threshold
-  gdd_doy <- which.lyr(agdd > gdd_threshold)
+  gdd_doy <- terra::which.lyr(agdd > gdd_threshold)
   
   # Change `NA`s that represent never reaching the threshold GDD to `Inf`s.
   # These will be treated the same for modeling (i.e. dropped), but will allow
