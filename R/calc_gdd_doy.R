@@ -8,7 +8,7 @@
 #'
 #' @return SpatRaster
 calc_gdd_doy <- function(rast_dir, roi, gdd_threshold, gdd_base = 0) {
-  files <- dir_ls(rast_dir, glob = "*.zip")
+  files <- fs::dir_ls(rast_dir, glob = "*.zip")
 
   #convert filenames to DOY to name layers later
   doys <- files |>
@@ -33,8 +33,8 @@ calc_gdd_doy <- function(rast_dir, roi, gdd_threshold, gdd_base = 0) {
   prism <- subset(prism, as.character(min(doys):max(doys)))
   
   #crop to roi
-  roi <- project(roi, prism)
-  prism_ne <- crop(prism, roi, mask = TRUE)
+  roi <- terra::project(roi, prism)
+  prism_ne <- terra::crop(prism, roi, mask = TRUE)
   
   # convert to degree days
   # function for a single layer:
@@ -55,7 +55,7 @@ calc_gdd_doy <- function(rast_dir, roi, gdd_threshold, gdd_base = 0) {
   agdd <- cumsum(gdd)
   
   # DOY to reach a single threshold
-  gdd_doy <- which.lyr(agdd > gdd_threshold)
+  gdd_doy <- terra::which.lyr(agdd > gdd_threshold)
   
   # Change `NA`s that represent never reaching the threshold GDD to `Inf`s.
   # These will be treated the same for modeling (i.e. dropped), but will allow
@@ -96,12 +96,12 @@ calc_gdd_be_doy <- function(tmin_dir, tmax_dir, roi, gdd_threshold, gdd_base = 3
   prism_sds <- terra::sds(prism_tmin_roi, prism_tmax_roi)
   
   # calculate degree days
-  gdd <- terra::app(prism_sds, function(i) {
-    calc_gdd_be(
-      tmin = i[1], #first dataset in prism_sds
-      tmax = i[2], #second dataset in prism_sds
-      base = gdd_base
-    )
+  gdd <- terra::lapp(prism_sds, function(x,y) {
+      calc_gdd_be(
+        tmin = x, #first dataset in prism_sds
+        tmax = y, #second dataset in prism_sds
+        base = gdd_base
+      )
   })
   
   # convert to accumulated gdd
@@ -131,10 +131,15 @@ calc_gdd_be_doy <- function(tmin_dir, tmax_dir, roi, gdd_threshold, gdd_base = 3
 #' @references 
 #' https://www.canr.msu.edu/uploads/files/Research_Center/NW_Mich_Hort/be_method.pdf
 calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
+  withr::local_options(list(warn = 2)) #turn warnings into errors in the scope of this function
   .mapply(function(tmin, tmax) { #for each day...
     #NAs beget NAs
     if (is.na(tmin) | is.na(tmax)) {
       return(NA)
+    }
+    #check that tmax >= tmin
+    if (tmin > tmax) {
+      stop("tmin > tmax!")
     }
     #step 2
     if (tmax < base) {
@@ -150,7 +155,17 @@ calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
     
     #step5
     W <- (tmax - tmin) / 2
-    A <- asin((base - tmean) / W)
+    x <- (base - tmean) / W
+    #special case for floating-point errors when `x` is (almost) equal to 1 or -1
+    if (isTRUE(all.equal(x, 1))) {
+      x <- 1
+    }
+    if (isTRUE(all.equal(x, -1))) {
+      x <- -1
+    }
+
+    A <- asin(x)
+
     gdd <- ((W * cos(A)) - ((base - tmean) * ((pi/2) - A))) / pi
     return(gdd)
   }, dots = list(tmin = tmin, tmax = tmax), MoreArgs = NULL) |> as.numeric()

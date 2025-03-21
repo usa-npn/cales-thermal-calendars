@@ -17,3 +17,5 @@ output/figs/*
 !output/figs/normals_sd_2500.png
 nohup.out
 .Renviron
+debugging.R
+
