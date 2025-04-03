@@ -10,3 +10,5 @@ logs/
 output/rasters/
 output/figs/
 output/data/
+nohup.out
+.Renviron
