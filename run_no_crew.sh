@@ -13,4 +13,4 @@
 export LD_PRELOAD=/opt/ohpc/pub/libs/gnu13/openblas/0.3.21/lib/libopenblas.so
 module load gdal/3.8.5 R/4.4 eigen/3.4.0
 
-R -e 'targets::tar_make()'
+R -e 'targets::tar_make(use_crew = FALSE)'

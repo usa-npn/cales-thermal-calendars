@@ -19,7 +19,7 @@ summarize_normals <- function(stack, years = 1991:2020) {
       if(!all(is.infinite(x))) {
         x <- x[is.finite(x)]
       }
-      c(mean = mean(x, na.rm = TRUE), sd = sd(x, na.rm = TRUE))
+      c(mean = mean(x, na.rm = TRUE), sd = sd(x, na.rm = TRUE), count = sum(is.finite(x)))
     })
 }
 
