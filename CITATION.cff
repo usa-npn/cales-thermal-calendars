@@ -1,0 +1,62 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Phenology in the Northeastern US
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Eric R
+    family-names: Scott
+    affiliation: >-
+      University of Arizona, Communications & Cyber
+      Technologies
+    orcid: 'https://orcid.org/0000-0002-7430-7879'
+  - given-names: Renata
+    family-names: Diaz
+    affiliation: >-
+      University of Arizona, Communications & Cyber
+      Technologies
+    orcid: 'https://orcid.org/0000-0003-0803-4734'
+  - given-names: Jeff
+    family-names: Switzer
+    affiliation: USA National Phenology Network
+  - orcid: 'https://orcid.org/0000-0002-2536-0403'
+    given-names: Erin
+    family-names: Zylstra
+    affiliation: USA National Phenology Network
+  - given-names: Kerissa
+    family-names: Battle
+    orcid: 'https://orcid.org/0000-0002-9152-1965'
+  - given-names: R. Talbot
+    family-names: Trotter
+    affiliation: US Forest Service
+  - given-names: Nathan W.
+    family-names: Siegert
+    affiliation: US Forest Service
+  - given-names: Kristina
+    family-names: Riemer
+    affiliation: >-
+      Communications & Cyber Technologies, University of
+      Arizona
+    orcid: 'https://orcid.org/0000-0003-3802-3331'
+  - given-names: Theresa
+    family-names: Crimmins
+    email: theresam@arizona.edu
+    affiliation: USA National Phenology Network
+    orcid: 'https://orcid.org/0000-0001-9592-625X'
+repository-code: 'https://github.com/usa-npn/cales-thermal-calendars'
+abstract: >-
+  This workflow calculates spatial and temporal patterns in
+  phenology in Northeast CASC member states using PRISM
+  temperature data. The workflow downloads daily data,
+  calculates growing degree days (GDD) for each day, and
+  then finds the day of year (DOY) that certain threshold
+  GDD are reached for this region. Products include rasters
+  of mean and standard deviation of the DOY a range of GDD
+  thresholds are reached over the normals period
+  (1991-2020).
+license: MIT
+date-released: '2025-04-03'
