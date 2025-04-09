@@ -14,11 +14,11 @@ library(crew.cluster)
 slurm_host <- Sys.getenv("SLURM_SUBMIT_HOST")
 hpc <- grepl("hpc\\.arizona\\.edu", slurm_host) & !grepl("ood", slurm_host)
 
-controller_hpc <- 
+controller_hpc <-
   crew.cluster::crew_controller_slurm(
     name = "hpc",
-    workers = 5, 
-    # make workers semi-persistent: 
+    workers = 5,
+    # make workers semi-persistent:
     tasks_max = 40, # shut down SLURM job after completing 40 targets
     seconds_idle = 300, # or when idle for some time
     options_cluster = crew_options_slurm(
@@ -40,7 +40,7 @@ controller_hpc <-
 controller_local <-
   crew::crew_controller_local(
     name = "local",
-    workers = 6, 
+    workers = 6,
     seconds_idle = 60,
     options_local = crew::crew_options_local(
       log_directory = "logs/"
@@ -49,9 +49,11 @@ controller_local <-
 
 js2 <- Sys.info()[["sysname"]] == "Linux" #TODO: this is crude.  Find a better indicator JS2
 
-if (isTRUE(hpc) | isTRUE(js2)) { #when on HPC or Jetstream2, do ALL the thresholds
+if (isTRUE(hpc) | isTRUE(js2)) {
+  #when on HPC or Jetstream2, do ALL the thresholds
   threshold <- seq(50, 2500, by = 50)
-} else { # only do select thresholds
+} else {
+  # only do select thresholds
   threshold <- c(50, 1250, 2500)
 }
 
@@ -73,7 +75,7 @@ tar_option_set(
     "maps",
     "tidyr",
     "dplyr"
-  ), 
+  ),
   controller = crew::crew_controller_group(controller_hpc, controller_local),
   resources = tar_resources(
     crew = tar_resources_crew(controller = ifelse(isTRUE(hpc), "hpc", "local"))
@@ -83,7 +85,7 @@ tar_option_set(
   retrieval = "worker",
   memory = "auto",
   #allows use of `tar_workspace()` to load dependencies of an errored target for interactive debugging.
-  workspace_on_error = TRUE 
+  workspace_on_error = TRUE
 )
 
 # `source()` the R scripts in the R/ folder with your custom functions:
@@ -114,16 +116,18 @@ tar_plan(
     deployment = "main",
     description = "vector for North East"
   ),
-  tar_map( # for each threshold...
+  tar_map(
+    # for each threshold...
     values = list(threshold = threshold),
     tar_terra_rast(
       gdd_doy,
-      calc_gdd_be_doy(
+      calc_gdd_doy(
         tmin_dir = prism_tmin, #ºC, but gets converted to ºF
         tmax_dir = prism_tmax, #ºC, but gets converted to ºF
-        roi = roi, 
-        gdd_threshold = threshold, 
-        gdd_base = 50 #ºF
+        roi = roi,
+        gdd_threshold = threshold,
+        gdd_base = 50, #ºF
+        method = "BE"
       ),
       pattern = map(prism_tmin, prism_tmax),
       iteration = "list",
@@ -142,20 +146,26 @@ tar_plan(
     #these layers are written out as separate files because that is what was requested
     tar_target(
       normals_mean_gtiff,
-      write_tiff(normals_summary[["mean"]],
-                 filename = paste0("normals_mean_", threshold, ".tiff")),
+      write_tiff(
+        normals_summary[["mean"]],
+        filename = paste0("normals_mean_", threshold, ".tiff")
+      ),
       format = "file"
     ),
     tar_target(
       normals_sd_gtiff,
-      write_tiff(normals_summary[["sd"]], 
-                 filename = paste0("normals_sd_", threshold, ".tiff")),
+      write_tiff(
+        normals_summary[["sd"]],
+        filename = paste0("normals_sd_", threshold, ".tiff")
+      ),
       format = "file"
     ),
     tar_target(
       normals_count_gtiff,
-      write_tiff(normals_summary[["count"]], 
-                 filename = paste0("normals_count_", threshold, ".tiff")),
+      write_tiff(
+        normals_summary[["count"]],
+        filename = paste0("normals_count_", threshold, ".tiff")
+      ),
       format = "file",
       description = "Number of years the GDD threshold is reached"
     ),
@@ -168,6 +178,59 @@ tar_plan(
       normals_sd_plot,
       plot_normals_sd(normals_summary, threshold, height = 7, width = 7),
       format = "file"
+    )
+  ), #end tar_map
+  #for just a few thresholds, use simple averaging to calculate GDD to compare
+  tar_map(
+    values = list(threshold = c(50, 1250, 2500)),
+    tar_terra_rast(
+      gdd_doy_simple,
+      calc_gdd_doy(
+        tmin_dir = prism_tmin, #ºC, but gets converted to ºF
+        tmax_dir = prism_tmax, #ºC, but gets converted to ºF
+        roi = roi,
+        gdd_threshold = threshold,
+        gdd_base = 50, #ºF
+        method = "simple"
+      ),
+      pattern = map(prism_tmin, prism_tmax),
+      iteration = "list"
+    ),
+    tar_terra_rast(
+      gdd_doy_stack_simple,
+      terra::rast(unname(gdd_doy_simple)),
+      description = "Stack list of SpatRasters into layers of single SpatRaster"
+    ),
+    tar_terra_rast(
+      normals_summary_simple,
+      summarize_normals(gdd_doy_stack_simple),
+      deployment = "main"
+    ),
+    #these layers are written out as separate files because that is what was requested
+    tar_target(
+      normals_mean_simple_gtiff,
+      write_tiff(
+        normals_summary_simple[["mean"]],
+        filename = paste0("normals_mean_simple_", threshold, ".tiff")
+      ),
+      format = "file"
+    ),
+    tar_target(
+      normals_sd_simple_gtiff,
+      write_tiff(
+        normals_summary_simple[["sd"]],
+        filename = paste0("normals_sd_simple_", threshold, ".tiff")
+      ),
+      format = "file"
+    ),
+    tar_target(
+      normals_count_simple_gtiff,
+      write_tiff(
+        normals_summary_simple[["count"]],
+        filename = paste0("normals_count_simple_", threshold, ".tiff")
+      ),
+      format = "file",
+      description = "Number of years the GDD threshold is reached"
     )
   )
 )
