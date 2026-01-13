@@ -720,6 +720,16 @@
       ],
       "Hash": "01f28d4278f15c76cddbea05899c5d6f"
     },
+    "prettyunits": {
+      "Package": "prettyunits",
+      "Version": "1.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "6b01fc98b1e86c4f705ce9dcfd2f57c7"
+    },
     "processx": {
       "Package": "processx",
       "Version": "3.8.6",
@@ -943,7 +953,7 @@
     },
     "targets": {
       "Package": "targets",
-      "Version": "1.10.1",
+      "Version": "1.11.4",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -956,6 +966,7 @@
         "data.table",
         "igraph",
         "knitr",
+        "prettyunits",
         "ps",
         "rlang",
         "secretbase",
@@ -967,7 +978,7 @@
         "vctrs",
         "yaml"
       ],
-      "Hash": "2063e268fc5d602e1bcbd094cd124c65"
+      "Hash": "c25e1088d3614e7a8a79410cc83bdd73"
     },
     "terra": {
       "Package": "terra",
