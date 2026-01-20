@@ -181,56 +181,56 @@ tar_plan(
     )
   ), #end tar_map
   #for just a few thresholds, use simple averaging to calculate GDD to compare
-  tar_map(
-    values = list(threshold = c(50, 1250, 2500)),
-    tar_terra_rast(
-      gdd_doy_simple,
-      calc_gdd_doy(
-        tmin_dir = prism_tmin, #ºC, but gets converted to ºF
-        tmax_dir = prism_tmax, #ºC, but gets converted to ºF
-        roi = roi,
-        gdd_threshold = threshold,
-        gdd_base = 50, #ºF
-        method = "simple"
-      ),
-      pattern = map(prism_tmin, prism_tmax),
-      iteration = "list"
-    ),
-    tar_terra_rast(
-      gdd_doy_stack_simple,
-      terra::rast(unname(gdd_doy_simple)),
-      description = "Stack list of SpatRasters into layers of single SpatRaster"
-    ),
-    tar_terra_rast(
-      normals_summary_simple,
-      summarize_normals(gdd_doy_stack_simple),
-      deployment = "main"
-    ),
-    #these layers are written out as separate files because that is what was requested
-    tar_target(
-      normals_mean_simple_gtiff,
-      write_tiff(
-        normals_summary_simple[["mean"]],
-        filename = paste0("normals_mean_simple_", threshold, ".tiff")
-      ),
-      format = "file"
-    ),
-    tar_target(
-      normals_sd_simple_gtiff,
-      write_tiff(
-        normals_summary_simple[["sd"]],
-        filename = paste0("normals_sd_simple_", threshold, ".tiff")
-      ),
-      format = "file"
-    ),
-    tar_target(
-      normals_count_simple_gtiff,
-      write_tiff(
-        normals_summary_simple[["count"]],
-        filename = paste0("normals_count_simple_", threshold, ".tiff")
-      ),
-      format = "file",
-      description = "Number of years the GDD threshold is reached"
-    )
-  )
+  # tar_map(
+  #   values = list(threshold = c(50, 1250, 2500)),
+  #   tar_terra_rast(
+  #     gdd_doy_simple,
+  #     calc_gdd_doy(
+  #       tmin_dir = prism_tmin, #ºC, but gets converted to ºF
+  #       tmax_dir = prism_tmax, #ºC, but gets converted to ºF
+  #       roi = roi,
+  #       gdd_threshold = threshold,
+  #       gdd_base = 50, #ºF
+  #       method = "simple"
+  #     ),
+  #     pattern = map(prism_tmin, prism_tmax),
+  #     iteration = "list"
+  #   ),
+  #   tar_terra_rast(
+  #     gdd_doy_stack_simple,
+  #     terra::rast(unname(gdd_doy_simple)),
+  #     description = "Stack list of SpatRasters into layers of single SpatRaster"
+  #   ),
+  #   tar_terra_rast(
+  #     normals_summary_simple,
+  #     summarize_normals(gdd_doy_stack_simple),
+  #     deployment = "main"
+  #   ),
+  #   #these layers are written out as separate files because that is what was requested
+  #   tar_target(
+  #     normals_mean_simple_gtiff,
+  #     write_tiff(
+  #       normals_summary_simple[["mean"]],
+  #       filename = paste0("normals_mean_simple_", threshold, ".tiff")
+  #     ),
+  #     format = "file"
+  #   ),
+  #   tar_target(
+  #     normals_sd_simple_gtiff,
+  #     write_tiff(
+  #       normals_summary_simple[["sd"]],
+  #       filename = paste0("normals_sd_simple_", threshold, ".tiff")
+  #     ),
+  #     format = "file"
+  #   ),
+  #   tar_target(
+  #     normals_count_simple_gtiff,
+  #     write_tiff(
+  #       normals_summary_simple[["count"]],
+  #       filename = paste0("normals_count_simple_", threshold, ".tiff")
+  #     ),
+  #     format = "file",
+  #     description = "Number of years the GDD threshold is reached"
+  #   )
+  # )
 )
